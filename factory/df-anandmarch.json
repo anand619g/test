@@ -1,0 +1,9 @@
+{
+	"name": "df-anandmarch",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "1792b8ae-0302-448d-963a-ee28b0d818f4",
+		"tenantId": "d6e2744c-e244-4d20-b40c-b4cb6ffd37c1"
+	}
+}
