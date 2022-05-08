@@ -1,0 +1,19 @@
+{
+	"name": "Input",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_blob",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "id4.txt",
+				"folderPath": "Input",
+				"container": "executepipeline"
+			}
+		}
+	}
+}
