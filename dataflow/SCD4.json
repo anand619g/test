@@ -126,11 +126,18 @@
 				"     insertable:false,",
 				"     updateable:false,",
 				"     upsertable:true,",
+				"     keys:['Empid'],",
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
 				"     saveOrder: 2,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sourcetocurrenttable"
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          Empid,",
+				"          Name,",
+				"          Salary,",
+				"          Eff_From",
+				"     )) ~> sourcetocurrenttable"
 			]
 		}
 	}
