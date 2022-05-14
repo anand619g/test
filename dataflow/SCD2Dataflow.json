@@ -1,0 +1,158 @@
+{
+	"name": "SCD2Dataflow",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SCD2Ip",
+						"type": "DatasetReference"
+					},
+					"name": "Blobinput"
+				},
+				{
+					"dataset": {
+						"referenceName": "SCD2OP",
+						"type": "DatasetReference"
+					},
+					"name": "Sqlinput"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SCD2OP",
+						"type": "DatasetReference"
+					},
+					"name": "updateexistingrecords"
+				},
+				{
+					"dataset": {
+						"referenceName": "SCD2OP",
+						"type": "DatasetReference"
+					},
+					"name": "insertnewrecords"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "Lookup"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "excludenullrecord"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "alterRow2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Designation as string,",
+				"          Eff_From as date 'dd-MM-yyyy'",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Blobinput",
+				"source(output(",
+				"          ID as integer,",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Designation as string,",
+				"          Eff_From as date,",
+				"          Eff_To as date,",
+				"          Is_Active as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> Sqlinput",
+				"Blobinput derive(Eff_To = toDate('2100-03-31'),",
+				"          Is_Active = \"Yes\") ~> derivedColumn1",
+				"Sqlinput, select1 lookup(Empid == Blob_Empid,",
+				"     multiple: true,",
+				"     broadcast: 'auto')~> Lookup",
+				"Blobinput select(mapColumn(",
+				"          Blob_Empid = Empid,",
+				"          Blob_Eff_From = Eff_From",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"Lookup filter(!isNull(Blob_Empid)) ~> excludenullrecord",
+				"excludenullrecord derive(Is_Active = \"No\",",
+				"          Eff_To = iif(year(Eff_To) == 2100,addDays(Blob_Eff_From, -1),Eff_To)) ~> derivedColumn2",
+				"derivedColumn2 select(mapColumn(",
+				"          ID,",
+				"          Empid,",
+				"          Name,",
+				"          Designation,",
+				"          Eff_From,",
+				"          Eff_To,",
+				"          Is_Active",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(updateIf(true())) ~> alterRow1",
+				"derivedColumn1 alterRow(insertIf(true())) ~> alterRow2",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ID as integer,",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Designation as string,",
+				"          Eff_From as date,",
+				"          Eff_To as date,",
+				"          Is_Active as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['ID'],",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> updateexistingrecords",
+				"alterRow2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ID as integer,",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Designation as string,",
+				"          Eff_From as date,",
+				"          Eff_To as date,",
+				"          Is_Active as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> insertnewrecords"
+			]
+		}
+	}
+}
