@@ -1,0 +1,137 @@
+{
+	"name": "SCD4",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "SCD4_Blob",
+						"type": "DatasetReference"
+					},
+					"name": "Blobinput"
+				},
+				{
+					"dataset": {
+						"referenceName": "SCD4_Curr",
+						"type": "DatasetReference"
+					},
+					"name": "scd4curr"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "SCD4_Hist",
+						"type": "DatasetReference"
+					},
+					"name": "curr2history"
+				},
+				{
+					"dataset": {
+						"referenceName": "SCD4_Curr",
+						"type": "DatasetReference"
+					},
+					"name": "sourcetocurrenttable"
+				}
+			],
+			"transformations": [
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow1"
+				},
+				{
+					"name": "updateexistingvalue"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Salary as string,",
+				"          Eff_From as date 'dd-MM-yyyy'",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> Blobinput",
+				"source(output(",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Salary as integer,",
+				"          Eff_From as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> scd4curr",
+				"scd4curr, select1 lookup(Empid == Blob_Empid,",
+				"     multiple: true,",
+				"     broadcast: 'auto')~> lookup1",
+				"Blobinput select(mapColumn(",
+				"          Blob_Empid = Empid,",
+				"          Blob_Eff_From = Eff_From",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"lookup1 derive(Eff_To = addDays(Blob_Eff_From,-1)) ~> derivedColumn1",
+				"derivedColumn1 select(mapColumn(",
+				"          Empid,",
+				"          Name,",
+				"          Salary,",
+				"          Eff_From,",
+				"          Eff_To",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(insertIf(true())) ~> alterRow1",
+				"Blobinput alterRow(upsertIf(true())) ~> updateexistingvalue",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Salary as integer,",
+				"          Eff_From as date,",
+				"          Eff_To as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> curr2history",
+				"updateexistingvalue sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Empid as integer,",
+				"          Name as string,",
+				"          Salary as integer,",
+				"          Eff_From as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:false,",
+				"     upsertable:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sourcetocurrenttable"
+			]
+		}
+	}
+}
